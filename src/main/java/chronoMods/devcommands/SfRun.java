@@ -23,6 +23,10 @@ public class SfRun extends ConsoleCommand {
 
     @Override
     protected void execute(String[] tokens, int depth) {
+        if (CoopCommandEvent.getProposedEvent() != null) {
+            DevConsole.log("You may only propose one command at a time");
+            return;
+        }
         String player = tokens[1];
         String command = String.join(" ", Arrays.copyOfRange(tokens, 2, tokens.length));
         CoopCommandEvent.proposeNewCommand(player, command);

@@ -37,7 +37,7 @@ public class CoopCommandEvent {
     /** Popup for asking to accept/reject the command. */
     private static InfoPopup infoPopup = new InfoPopup();
     /** Tracking the event ID for the current popup, -1 means no event */
-    private static int popupEventId = -1;
+    private static int currentEventId = -1;
 
     /** Player who proposed this command */
     public final RemotePlayer proposer;
@@ -151,7 +151,10 @@ public class CoopCommandEvent {
         events.add(event);
         NetworkHelper.sendData(NetworkHelper.dataType.CoopCommandPropose);
         // Auto-choose true if we're proposing the command
+        int oldId = currentEventId;
+        currentEventId = event.id;
         event.choose(true);
+        currentEventId = oldId;
     }
 
     /**
@@ -228,10 +231,10 @@ public class CoopCommandEvent {
      * Returns the most recent event or null
      */
     public static CoopCommandEvent getCurrentEvent() {
-        if (events.isEmpty() || popupEventId == -1) {
+        if (events.isEmpty() || currentEventId == -1) {
             return null;
         } else {
-            return getEventWithId(popupEventId);
+            return getEventWithId(currentEventId);
         }
     }
 
@@ -269,20 +272,20 @@ public class CoopCommandEvent {
         // If it's not visible then either a choice was made, or we can show a new choice
         if (!infoPopup.shown) {
             // Choice was made, update the choice
-            if (popupEventId != -1) {
-                CoopCommandEvent event = getEventWithId(popupEventId);
+            if (currentEventId != -1) {
+                CoopCommandEvent event = getEventWithId(currentEventId);
                 if (event != null) {
                     event.choose(infoPopup.confirmed);
-                    popupEventId = -1;
+                    currentEventId = -1;
                 }
             }
             // No choice (or we just ended), see if we need to open a new popup
-            if (popupEventId == -1) {
+            if (currentEventId == -1) {
                 // Try to find an event that the player hasn't made a choice for yet
                 events.stream().filter(e -> !e.hasChosen).findFirst().ifPresent(e -> {
                     String msg = String.format(TEXT[1], e.proposer.userName, e.command);
                     infoPopup.show(TEXT[0], msg, true);
-                    popupEventId = e.id;
+                    currentEventId = e.id;
                 });
             }
         }

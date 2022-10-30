@@ -1611,7 +1611,6 @@ public class NetworkHelper {
 				data = CoopCommandEvent.getProposedEvent().encodeProposePacket();
 				break;
 			case CoopCommandSelect:
-				// TODO get current event ID from UI element (that doesn't yet exist)
 				data = CoopCommandEvent.getCurrentEvent().encodeChoicePacket();
 				break;
 			default:

@@ -2,7 +2,7 @@ package chronoMods;
 
 import basemod.devcommands.ConsoleCommand;
 import chronoMods.coop.CoopCourierScreen;
-import chronoMods.devcommands.CoopRelic;
+import chronoMods.devcommands.SfRelic;
 import chronoMods.devcommands.SfRun;
 import com.evacipated.cardcrawl.modthespire.lib.*;
 import com.evacipated.cardcrawl.modthespire.*;
@@ -264,7 +264,7 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
 
         // Add console commands
         ConsoleCommand.addCommand(SfRun.KEY, SfRun.class);
-        ConsoleCommand.addCommand("coop-relic", CoopRelic.class);
+        ConsoleCommand.addCommand(SfRelic.KEY, SfRelic.class);
 
         // Register custom rewards
         BaseMod.registerCustomReward(
