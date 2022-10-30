@@ -12,7 +12,6 @@ import org.apache.logging.log4j.*;
 import com.megacrit.cardcrawl.core.CardCrawlGame;
 import com.megacrit.cardcrawl.core.Settings;
 import com.megacrit.cardcrawl.actions.*;
-import com.megacrit.cardcrawl.characters.*;
 import com.megacrit.cardcrawl.actions.common.*;
 import com.megacrit.cardcrawl.cards.*;
 import com.megacrit.cardcrawl.helpers.*;
@@ -22,7 +21,6 @@ import com.megacrit.cardcrawl.rewards.*;
 import com.megacrit.cardcrawl.relics.*;
 import com.megacrit.cardcrawl.potions.*;
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
-import com.megacrit.cardcrawl.ui.buttons.*;
 import com.megacrit.cardcrawl.vfx.*;
 import com.megacrit.cardcrawl.vfx.combat.*;
 import com.megacrit.cardcrawl.screens.*;
@@ -30,18 +28,14 @@ import com.megacrit.cardcrawl.ui.*;
 import com.megacrit.cardcrawl.screens.mainMenu.MainMenuScreen;
 import com.megacrit.cardcrawl.vfx.cardManip.ShowCardAndObtainEffect;
 import com.megacrit.cardcrawl.cutscenes.*;
-import com.megacrit.cardcrawl.events.*;
-import com.megacrit.cardcrawl.ui.campfire.*;
 
 import com.badlogic.gdx.math.*;
-import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.files.FileHandle;
 
 import chronoMods.*;
 import chronoMods.coop.*;
-import chronoMods.coop.hubris.*;
 import chronoMods.coop.infusions.*;
 import chronoMods.coop.hardmode.*;
 import chronoMods.coop.relics.*;
@@ -58,8 +52,6 @@ import java.util.*;
 import java.lang.*;
 import java.nio.*;
 import java.io.IOException;
-
-import com.codedisaster.steamworks.*;
 
 public class NetworkHelper {
 
@@ -1097,12 +1089,20 @@ public class NetworkHelper {
 							h.checkUsable();
 
 				break;
+			case CoopCommandPropose:
+				bufPos(data, 0);
+				CoopCommandEvent.handleProposePacket(data, playerInfo);
+				break;
+			case CoopCommandSelect:
+				bufPos(data, 0);
+				CoopCommandEvent.handleSelectPacket(data, playerInfo);
+				break;
 		}
 	}
 
     public static enum dataType
     {
-      	Rules, Start, Ready, Version, Floor, Act, Hp, Money, BossRelic, Finish, SendCard, SendCardGhost, TransferCard, TransferRelic, TransferPotion, UsePotion, SendPotion, EmptyRoom, BossChosen, Splits, SetDisplayRelics, ClearRoom, LockRoom, ChooseNeow, ChooseTeamRelic, LoseLife, Kick, GetRedKey, GetBlueKey, GetGreenKey, Character, GetPotion, AddPotionSlot, SendRelic, ModifyBrainFreeze, DrawMap, ClearMap, DeckInfo, RelicInfo, RequestVersion, SendCardMessageBottle, AtDoor, Victory, TransferBooster, Bingo, BingoRules, TeamChange, BingoCard, TeamName, CustomMark, LastBoss, SendMessage, BluntScissorCard, MergeUncommon, Infusion, HeartChoice;
+      	Rules, Start, Ready, Version, Floor, Act, Hp, Money, BossRelic, Finish, SendCard, SendCardGhost, TransferCard, TransferRelic, TransferPotion, UsePotion, SendPotion, EmptyRoom, BossChosen, Splits, SetDisplayRelics, ClearRoom, LockRoom, ChooseNeow, ChooseTeamRelic, LoseLife, Kick, GetRedKey, GetBlueKey, GetGreenKey, Character, GetPotion, AddPotionSlot, SendRelic, ModifyBrainFreeze, DrawMap, ClearMap, DeckInfo, RelicInfo, RequestVersion, SendCardMessageBottle, AtDoor, Victory, TransferBooster, Bingo, BingoRules, TeamChange, BingoCard, TeamName, CustomMark, LastBoss, SendMessage, BluntScissorCard, MergeUncommon, Infusion, HeartChoice, CoopCommandPropose, CoopCommandSelect;
       
     	private dataType() {}
     }
@@ -1607,6 +1607,13 @@ public class NetworkHelper {
 				data = ByteBuffer.allocateDirect(8);
 				data.putInt(4, HardModeHeart.HeartChoice);
 				break;
+			case CoopCommandPropose:
+				data = CoopCommandEvent.getProposedEvent().encodeProposePacket();
+				break;
+			case CoopCommandSelect:
+				// TODO get current event ID from UI element (that doesn't yet exist)
+				data = CoopCommandEvent.getCurrentEvent().encodeChoicePacket();
+				break;
 			default:
 				data = ByteBuffer.allocateDirect(4);
 				break;
@@ -1615,6 +1622,12 @@ public class NetworkHelper {
 		data.putInt(0, type.ordinal());
 
 		return data;
+	}
+
+	/** Convenience function. */
+	private static ByteBuffer bufPos(ByteBuffer buf, int newPosition) {
+		((Buffer)buf).position(newPosition);
+		return buf;
 	}
 
 	public static Integration service() {

@@ -99,6 +99,9 @@ public class MapCanvasController {
 	        if (b.hb.hovered && !hidden) {
 	            TipHelper.renderGenericTip(b.hb.cX - 320.0F * Settings.scale / 2f, b.hb.cY + TOOLTIP_Y_OFFSET, TEXT[2], TEXT[3] + b.player.userName + TEXT[4]); }
 		}
+
+		// Dev console patch
+
 	}
 
 	public void render(SpriteBatch sb, float a) {

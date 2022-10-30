@@ -150,6 +150,14 @@
       "When checked, all squares of the board must be fulfilled in order to win"
     ]
   },
+  "CoopCommand": {
+    "TEXT": [
+      "Allow Command?",
+      "Player %s wants to run:\n%s",
+      "all",
+      "me"
+    ]
+  },
   "CoopLegend": {
     "TEXT": [
       "Courier",

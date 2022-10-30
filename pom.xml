@@ -39,14 +39,14 @@
             <artifactId>downfall</artifactId>
             <version>3.1.11</version>
             <scope>system</scope>
-            <systemPath>/Users/Chronometrics/Library/Application Support/Steam/steamapps/workshop/content/646570/1610056683/downfall.jar</systemPath>
+            <systemPath>${mods-folder-path}/downfall.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>mod-group-name</groupId>
             <artifactId>AscensionPlus</artifactId>
             <version>1.2</version>
             <scope>system</scope>
-            <systemPath>/Users/Chronometrics/Library/Application Support/Steam/steamapps/workshop/content/646570/2855937000/AscensionPlus.jar</systemPath>
+            <systemPath>${mods-folder-path}/AscensionPlus.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.github.JnCrMx</groupId>

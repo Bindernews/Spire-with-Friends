@@ -1,5 +1,6 @@
 package chronoMods.coop.relics;
 
+import chronoMods.coop.CoopCourierRoom;
 import com.evacipated.cardcrawl.modthespire.lib.*;
 
 import com.badlogic.gdx.graphics.*;

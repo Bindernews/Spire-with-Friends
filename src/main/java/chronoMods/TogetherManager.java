@@ -1,78 +1,47 @@
 package chronoMods;
 
+import basemod.devcommands.ConsoleCommand;
+import chronoMods.coop.CoopCourierScreen;
+import chronoMods.devcommands.CoopRelic;
+import chronoMods.devcommands.SfRun;
 import com.evacipated.cardcrawl.modthespire.lib.*;
 import com.evacipated.cardcrawl.modthespire.*;
 
 import com.megacrit.cardcrawl.localization.*;
-import com.megacrit.cardcrawl.screens.custom.*;
 import com.megacrit.cardcrawl.screens.*;
-import com.megacrit.cardcrawl.ui.panels.*;
-import com.megacrit.cardcrawl.screens.stats.*;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
-import com.badlogic.gdx.graphics.Pixmap.Format;
 import com.megacrit.cardcrawl.core.*;
 import com.megacrit.cardcrawl.helpers.*;
-import com.megacrit.cardcrawl.helpers.input.*;
-import com.megacrit.cardcrawl.map.*;
-import com.megacrit.cardcrawl.cards.*;
 import com.megacrit.cardcrawl.dungeons.*;
-import com.megacrit.cardcrawl.relics.*;
-import com.megacrit.cardcrawl.characters.*;
 import com.megacrit.cardcrawl.rewards.*;
-import com.megacrit.cardcrawl.relics.*;
 import com.megacrit.cardcrawl.blights.*;
-import com.megacrit.cardcrawl.screens.options.*;
-import com.codedisaster.steamworks.*;
-import com.megacrit.cardcrawl.vfx.cardManip.ShowCardAndObtainEffect;
-import com.megacrit.cardcrawl.rooms.*;
 
 import basemod.*;
 import basemod.eventUtil.*;
-import basemod.helpers.*;
-import basemod.abstracts.*;
 import basemod.interfaces.*;
-import basemod.patches.whatmod.*;
 
 import org.apache.logging.log4j.*;
 import java.nio.charset.StandardCharsets;
-import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.*;
-import javassist.CannotCompileException;
-import javassist.expr.ExprEditor;
-import javassist.expr.MethodCall;
 import java.io.*;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-
-import chronoMods.*;
 import chronoMods.bingo.*;
-import chronoMods.network.steam.*;
 import chronoMods.network.*;
 import chronoMods.coop.*;
 import chronoMods.chat.*;
-import chronoMods.coop.hubris.*;
 import chronoMods.coop.relics.*;
 import chronoMods.coop.hardmode.*;
 import chronoMods.coop.drawable.*;
 import chronoMods.coop.infusions.*;
 import chronoMods.ui.deathScreen.*;
 import chronoMods.ui.hud.*;
-import chronoMods.ui.lobby.*;
 import chronoMods.ui.mainMenu.*;
 import chronoMods.utilities.*;
-
-
-import com.megacrit.cardcrawl.cards.green.*;
-import com.megacrit.cardcrawl.cards.red.*;
-import com.megacrit.cardcrawl.cards.blue.*;
-import com.megacrit.cardcrawl.cards.purple.*;
 
 @SpireInitializer
 public class TogetherManager implements PostDeathSubscriber, PostInitializeSubscriber, PostDungeonInitializeSubscriber, EditStringsSubscriber, StartGameSubscriber {
@@ -151,7 +120,7 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
     public static SplitTracker splitTracker;
 
     // The Courier screen
-    public static CoopCourierScreen courierScreen; 
+    public static CoopCourierScreen courierScreen;
 
     // The Team Relic screen
     public static CoopBossRelicSelectScreen teamRelicScreen; 
@@ -186,6 +155,13 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
 
     // Debug flag
     public static final boolean debug = false;
+
+    /**
+     * DevConsole is patched to only allow dev commands when everyone agrees. This controls if dev commands are
+     * currently allowed or are being blocked. Commands are only allowed briefly while internal code is running
+     * accepted commands, otherwise they are blocked.
+     */
+    private static boolean allowDevCommands = false;
 
     public static enum mode
     {
@@ -286,8 +262,9 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
         // Custom strings
         CustomStringsMap = CustomStrings.importCustomStrings();
 
-        // Disable cheaty console
-        DevConsole.enabled = debug;
+        // Add console commands
+        ConsoleCommand.addCommand(SfRun.KEY, SfRun.class);
+        ConsoleCommand.addCommand("coop-relic", CoopRelic.class);
 
         // Register custom rewards
         BaseMod.registerCustomReward(
@@ -580,11 +557,17 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
 
     public static int ord = 0;
 
+    public static boolean getAllowDevCommands() {
+        return allowDevCommands || debug;
+    }
+
+    public static void setAllowDevCommands(boolean allowDevCommands) {
+        TogetherManager.allowDevCommands = allowDevCommands;
+    }
+
     @SpirePatch(clz = AbstractDungeon.class, method="update")
     public static class ConvenienceDebugPresses {
         public static void Postfix(AbstractDungeon __instance) {
-
-        DevConsole.enabled = debug;
 
         Caller.bingoNotificationQueue();
 
