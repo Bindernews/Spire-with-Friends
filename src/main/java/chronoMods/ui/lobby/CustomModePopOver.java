@@ -2,7 +2,6 @@ package chronoMods.ui.lobby;
 
 import chronoMods.coop.MergeCustom;
 import chronoMods.network.NetworkHelper;
-import chronoMods.ui.mainMenu.NewMenuButtons;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -205,7 +204,7 @@ public class CustomModePopOver implements ScrollBarListener {
   }
   
   public void updateValues() {
-      for (CustomMod cm : NewMenuButtons.customScreen.modList) {
+      for (CustomMod cm : modList) {
           if (cm.selected) { 
               Settings.isTrial = true;
               CustomTrial trial = new CustomTrial();

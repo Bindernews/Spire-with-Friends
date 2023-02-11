@@ -1,13 +1,35 @@
 package chronoMods;
 
-import com.evacipated.cardcrawl.modthespire.lib.*;
-import com.evacipated.cardcrawl.modthespire.*;
-
-import com.megacrit.cardcrawl.localization.*;
-import com.megacrit.cardcrawl.screens.custom.*;
-import com.megacrit.cardcrawl.screens.*;
-import com.megacrit.cardcrawl.ui.panels.*;
-import com.megacrit.cardcrawl.screens.stats.*;
+import basemod.BaseMod;
+import basemod.DevConsole;
+import basemod.ModPanel;
+import basemod.ReflectionHacks;
+import basemod.devcommands.ConsoleCommand;
+import basemod.eventUtil.EventUtils;
+import basemod.interfaces.*;
+import chronoMods.bingo.BingoQuickReset;
+import chronoMods.bingo.Caller;
+import chronoMods.chat.ChatScreen;
+import chronoMods.coop.*;
+import chronoMods.coop.courier.CoopCourierScreen;
+import chronoMods.coop.drawable.MapCanvasController;
+import chronoMods.coop.hardmode.HearthOption;
+import chronoMods.coop.hardmode.StrangeFlame;
+import chronoMods.coop.infusions.LinkedInfusions;
+import chronoMods.coop.relics.*;
+import chronoMods.devcommands.SfRelic;
+import chronoMods.devcommands.SfRun;
+import chronoMods.network.Lobby;
+import chronoMods.network.NetworkHelper;
+import chronoMods.network.RemotePlayer;
+import chronoMods.network.SendDataPatches;
+import chronoMods.ui.deathScreen.FlightReward;
+import chronoMods.ui.deathScreen.RewardTypePatch;
+import chronoMods.ui.deathScreen.StarterRelicUpgradeReward;
+import chronoMods.ui.hud.*;
+import chronoMods.ui.mainMenu.NewMenuButtons;
+import chronoMods.utilities.CustomStrings;
+import chronoMods.utilities.SpireWithFriendsConfig;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
@@ -35,48 +57,10 @@ import com.megacrit.cardcrawl.screens.DoorUnlockScreen;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import basemod.*;
-import basemod.eventUtil.*;
-import basemod.helpers.*;
-import basemod.abstracts.*;
-import basemod.interfaces.*;
-import basemod.patches.whatmod.*;
-
-import org.apache.logging.log4j.*;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.lang.reflect.Type;
 import java.util.*;
-import java.util.concurrent.*;
-import javassist.CannotCompileException;
-import javassist.expr.ExprEditor;
-import javassist.expr.MethodCall;
-import java.io.*;
-
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-
-import chronoMods.*;
-import chronoMods.bingo.*;
-import chronoMods.network.steam.*;
-import chronoMods.network.*;
-import chronoMods.coop.*;
-import chronoMods.chat.*;
-import chronoMods.coop.hubris.*;
-import chronoMods.coop.relics.*;
-import chronoMods.coop.hardmode.*;
-import chronoMods.coop.drawable.*;
-import chronoMods.coop.infusions.*;
-import chronoMods.ui.deathScreen.*;
-import chronoMods.ui.hud.*;
-import chronoMods.ui.lobby.*;
-import chronoMods.ui.mainMenu.*;
-import chronoMods.utilities.*;
-
-
-import com.megacrit.cardcrawl.cards.green.*;
-import com.megacrit.cardcrawl.cards.red.*;
-import com.megacrit.cardcrawl.cards.blue.*;
-import com.megacrit.cardcrawl.cards.purple.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @SpireInitializer
 public class TogetherManager implements PostDeathSubscriber, PostInitializeSubscriber, PostDungeonInitializeSubscriber, EditStringsSubscriber, StartGameSubscriber {
@@ -155,7 +139,7 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
     public static SplitTracker splitTracker;
 
     // The Courier screen
-    public static CoopCourierScreen courierScreen; 
+    public static CoopCourierScreen courierScreen;
 
     // The Team Relic screen
     public static CoopBossRelicSelectScreen teamRelicScreen; 
@@ -592,11 +576,17 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
 
     public static int ord = 0;
 
+    public static boolean getAllowDevCommands() {
+        return allowDevCommands || debug;
+    }
+
+    public static void setAllowDevCommands(boolean allowDevCommands) {
+        TogetherManager.allowDevCommands = allowDevCommands;
+    }
+
     @SpirePatch(clz = AbstractDungeon.class, method="update")
     public static class ConvenienceDebugPresses {
         public static void Postfix(AbstractDungeon __instance) {
-
-        DevConsole.enabled = debug;
 
         Caller.bingoNotificationQueue();
 
