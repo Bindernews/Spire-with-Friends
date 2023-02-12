@@ -54,7 +54,7 @@ public class CoopCommandEvent {
      * Encode and return this player's choice for this command as a byte buffer.
      */
     public ByteBuffer encodeChoicePacket() {
-        ByteBuffer data = ByteBuffer.allocateDirect(4+2+4+1);
+        ByteBuffer data = BBuf.allocate(10 + 1);
         putHeader(data, CoopCommandHandler.PACKET_SELECT);
         data.put((byte)(currentChoice ? 1:0));
         return BBuf.pos(data, 0);
@@ -66,7 +66,7 @@ public class CoopCommandEvent {
     public ByteBuffer encodeProposePacket() {
         byte[] targetBytes = target.getBytes(UTF_8);
         byte[] commandBytes = command.getBytes(UTF_8);
-        ByteBuffer data = BBuf.allocate(4 + 2 + 4 + targetBytes.length + 2 + commandBytes.length + 2);
+        ByteBuffer data = BBuf.allocate(10 + targetBytes.length + 2 + commandBytes.length + 2);
         putHeader(data, CoopCommandHandler.PACKET_PROPOSE);
         BBuf.putLenBytes(data, targetBytes);
         BBuf.putLenBytes(data, commandBytes);

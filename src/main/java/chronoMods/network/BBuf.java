@@ -25,10 +25,9 @@ public class BBuf {
      * Adds 2 bytes denoting the length of the byte array, and then the byte array itself.
      * Mostly useful when adding strings.
      */
-    public static ByteBuffer putLenBytes(ByteBuffer b, byte[] bytes) {
+    public static void putLenBytes(ByteBuffer b, byte[] bytes) {
         b.putShort((short)bytes.length);
         b.put(bytes);
-        return b;
     }
 
     public static byte[] getLenBytes(ByteBuffer b) {
