@@ -151,12 +151,16 @@
     ]
   },
   "CoopCommand": {
-    "TEXT": [
-      "Allow Command?",
-      "Player %s wants to run:\n%s",
-      "all",
-      "me"
-    ]
+    "TEXT_DICT": {
+      "allow_command": "Allow Command?",
+      "player proposing": "Player %s wants to run: %s",
+      "yes no help": "Use '/sfrun %d [yes|no]' to accept or reject the command.",
+      "player_command": "Player %s is running:\n%s",
+      "sfrun only host": "Only the host may use the sfrun command.",
+      "sfrun not in lobby": "You are not in a co-op game!",
+      "all": "all",
+      "me": "me"
+    }
   },
   "CoopLegend": {
     "TEXT": [

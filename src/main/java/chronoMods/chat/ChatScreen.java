@@ -7,6 +7,7 @@ import chronoMods.TogetherManager;
 import chronoMods.chat.TextEffects.NullEffect;
 import chronoMods.chat.TextEffects.TextEffect;
 import chronoMods.network.NetworkHelper;
+import chronoMods.network.RemotePlayer;
 import chronoMods.ui.lobby.NewGameScreen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
@@ -27,6 +28,7 @@ import com.megacrit.cardcrawl.helpers.input.InputHelper;
 
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.function.Consumer;
 
 public class ChatScreen implements PostUpdateSubscriber, RenderSubscriber {
 
@@ -74,6 +76,8 @@ public class ChatScreen implements PostUpdateSubscriber, RenderSubscriber {
     public Hitbox hb;
     ArrayList<PowerTip> tips = new ArrayList();
 
+    public final ArrayList<ChatListener> listeners = new ArrayList<>();
+
     public ChatScreen() {
         vanillaInput = Gdx.input.getInputProcessor();
         chatInput = new ChatTextProcessor(this);
@@ -120,6 +124,13 @@ public class ChatScreen implements PostUpdateSubscriber, RenderSubscriber {
             }
         }
         this.showTimer = 5.0F;
+    }
+
+    public void receivePlayerChat(RemotePlayer player, String message) {
+        addMsg(player.userName, message, player.colour);
+        for (ChatListener l : listeners) {
+            l.postChatReceive(player, message);
+        }
     }
 
     public void makeText(String msg) {
@@ -321,9 +332,22 @@ public class ChatScreen implements PostUpdateSubscriber, RenderSubscriber {
         }
 
         if (isOpen) {
-            if (TypingMsg != "") {
+            if (!TypingMsg.isEmpty()) {
                 if (Gdx.input.isKeyJustPressed(SendKey)) {
-                    NetworkHelper.sendData(NetworkHelper.dataType.SendMessage);
+                    // Send message to listeners, allowing them to process and potentially cancel the message.
+                    String msg = TypingMsg;
+                    for (ChatListener l : listeners) {
+                        msg = l.preChatSend(msg);
+                        if (msg.isEmpty()) {
+                            break;
+                        }
+                    }
+                    // Only send the message if it's not the empty string.
+                    if (!msg.isEmpty()) {
+                        TypingMsg = msg;
+                        NetworkHelper.sendData(NetworkHelper.dataType.SendMessage);
+                    }
+                    // Reset input state
                     TypingMsg = "";
                     TypingCursor = 0;
                     isOpen = false;

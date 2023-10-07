@@ -19,10 +19,7 @@ import chronoMods.coop.infusions.LinkedInfusions;
 import chronoMods.coop.relics.*;
 import chronoMods.devcommands.SfRelic;
 import chronoMods.devcommands.SfRun;
-import chronoMods.network.Lobby;
-import chronoMods.network.NetworkHelper;
-import chronoMods.network.RemotePlayer;
-import chronoMods.network.SendDataPatches;
+import chronoMods.network.*;
 import chronoMods.ui.deathScreen.FlightReward;
 import chronoMods.ui.deathScreen.RewardTypePatch;
 import chronoMods.ui.deathScreen.StarterRelicUpgradeReward;
@@ -476,6 +473,10 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
 
         NetworkHelper.embarked = true;
 
+        if (TogetherManager.gameMode == mode.Coop) {
+            CoopCommandHandler.startGame();
+        }
+
         if (TogetherManager.gameMode == TogetherManager.mode.Coop && NewMenuButtons.newGameScreen.hardToggle.isTicked()) {
             (new ChainsOfFate()).instantObtain(AbstractDungeon.player, 0, false);
             (new StrangeFlame()).instantObtain(AbstractDungeon.player, 1, false);
@@ -498,6 +499,7 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
         chatScreen.clear();
         MergeCustom.isActive = false;
         teamBlights.clear();
+        CoopCommandHandler.reset();
     }
 
     public static int getModHash() {
@@ -576,6 +578,9 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
 
     public static int ord = 0;
 
+    /**
+     * @return if console commands are currently allowed
+     */
     public static boolean getAllowDevCommands() {
         return allowDevCommands || debug;
     }

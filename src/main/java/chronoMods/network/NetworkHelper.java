@@ -59,6 +59,7 @@ import com.megacrit.cardcrawl.vfx.cardManip.ShowCardAndObtainEffect;
 import com.megacrit.cardcrawl.vfx.combat.DamageNumberEffect;
 import com.megacrit.cardcrawl.vfx.combat.HealNumberEffect;
 import downfall.patches.EvilModeCharacterSelect;
+import lombok.val;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -1027,8 +1028,7 @@ public class NetworkHelper {
                 try {
                     byte[] sndmsgBytes = new byte[data.remaining()];
                     data.get(sndmsgBytes);
-                    String sndmsg = new String(sndmsgBytes);
-                    TogetherManager.chatScreen.addMsg(playerInfo.userName, sndmsg, playerInfo.colour);
+					TogetherManager.chatScreen.receivePlayerChat(playerInfo, new String(sndmsgBytes));
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -1106,7 +1106,7 @@ public class NetworkHelper {
 
 				break;
 			case CoopCommand:
-				CoopCommandHandler.handlePacket(data, playerInfo);
+				CoopCommandHandler.handlePacket(new Packet(playerInfo, data));
 				break;
 		}
 	}
@@ -1617,6 +1617,9 @@ public class NetworkHelper {
 			case HeartChoice:
 				data = ByteBuffer.allocateDirect(8);
 				data.putInt(4, HardModeHeart.HeartChoice);
+				break;
+			case CoopCommand:
+				data = CoopCommandHandler.encodePacket();
 				break;
 			default:
 				data = ByteBuffer.allocateDirect(4);

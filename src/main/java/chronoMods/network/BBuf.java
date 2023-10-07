@@ -14,9 +14,11 @@ public class BBuf {
     }
 
     /**
-     * Shorthand for {@link Buffer#position(int)}
+     * Shorthand for {@link Buffer#position(int)}.
      */
     public static ByteBuffer pos(ByteBuffer b, int newPosition) {
+        // This cast is not redundant for some reason, maybe an issue with the version of
+        // java the StS ships?
         ((Buffer)b).position(newPosition);
         return b;
     }

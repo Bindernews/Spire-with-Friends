@@ -3,6 +3,7 @@ package chronoMods.coop;
 import basemod.DevConsole;
 import chronoMods.TogetherManager;
 import chronoMods.network.BBuf;
+import chronoMods.network.CoopCommandHandler;
 import chronoMods.network.NetworkHelper;
 import chronoMods.network.RemotePlayer;
 import com.badlogic.gdx.utils.LongMap;
@@ -33,10 +34,7 @@ public class CoopCommandEvent {
     public final int id;
 
     /** Track if the local player has made a choice, used for UI */
-    boolean hasChosen = false;
-
-    /** The local player's choice to allow or reject the command */
-    private boolean currentChoice = false;
+    public boolean hasChosen = false;
 
     /**
      * All players' choices on accept/reject
@@ -56,7 +54,7 @@ public class CoopCommandEvent {
     public ByteBuffer encodeChoicePacket() {
         ByteBuffer data = BBuf.allocate(10 + 1);
         putHeader(data, CoopCommandHandler.PACKET_SELECT);
-        data.put((byte)(currentChoice ? 1:0));
+        data.put((byte)(getCurrentChoice() ? 1:0));
         return BBuf.pos(data, 0);
     }
 
@@ -87,6 +85,11 @@ public class CoopCommandEvent {
     public void registerChoice(boolean choice, RemotePlayer playerInfo) {
         // Update choice
         playerChoices.put(playerInfo.getAccountID(), choice);
+        // If the player is our current user, set hasChosen = true
+        if (playerInfo.isUser(TogetherManager.currentUser)) {
+            hasChosen = true;
+        }
+
         // Check if decision is complete, either everyone agrees, or it doesn't go through
         if (playerChoices.size == TogetherManager.players.size()) {
             boolean accept = true;
@@ -99,11 +102,10 @@ public class CoopCommandEvent {
             if (accept) {
                 // Everyone agrees!
                 TogetherManager.log("Co-op command was accepted");
-                TogetherManager.setAllowDevCommands(true);
-                DevConsole.currentText = command;
-                DevConsole.execute();
-                DevConsole.priorCommands.remove(0);
-                TogetherManager.setAllowDevCommands(false);
+                // Only run the command if we are the intended target, or if everyone should run it
+                if (target.equals("all") || target.equals(TogetherManager.currentUser.userName)) {
+                    runCommand();
+                }
             } else {
                 // Not consensus, don't allow
                 TogetherManager.log("Co-op command was rejected");
@@ -113,18 +115,13 @@ public class CoopCommandEvent {
         }
     }
 
-    /**
-     * Called to set the local player's choice
-     * @param allow true to allow, false to reject
-     */
-    public void choose(boolean allow) {
-        currentChoice = allow;
-        // Send the network choice BEFORE calling registerChoice so that we don't remove the event before using it
-        CoopCommandHandler.sendChoice(this);
-        hasChosen = true;
-        registerChoice(currentChoice, TogetherManager.currentUser);
+    private void runCommand() {
+        TogetherManager.setAllowDevCommands(true);
+        DevConsole.currentText = command;
+        DevConsole.execute();
+        DevConsole.priorCommands.remove(0);
+        TogetherManager.setAllowDevCommands(false);
     }
-
 
 
     /**
@@ -139,7 +136,7 @@ public class CoopCommandEvent {
     }
 
     public boolean getCurrentChoice() {
-        return currentChoice;
+        return playerChoices.get(TogetherManager.currentUser.getAccountID(), false);
     }
 
     public String getCommand() {

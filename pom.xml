@@ -65,6 +65,12 @@
             <artifactId>discord-game-sdk4j</artifactId>
             <version>${discord-game-sdk4j.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <!-- This is how your code is packaged into the jar file-->

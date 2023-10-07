@@ -3,10 +3,11 @@ package chronoMods.devcommands;
 import basemod.DevConsole;
 import basemod.devcommands.ConsoleCommand;
 import chronoMods.TogetherManager;
-import chronoMods.coop.CoopCommandHandler;
+import chronoMods.network.CoopCommandHandler;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class SfRun extends ConsoleCommand {
@@ -22,10 +23,15 @@ public class SfRun extends ConsoleCommand {
 
     @Override
     protected void execute(String[] tokens, int depth) {
-        if (CoopCommandHandler.getProposedEvent() != null) {
-            DevConsole.log("You may only propose one command at a time");
+        if (TogetherManager.currentLobby == null) {
+            DevConsole.log(getText().get("sfrun not in lobby"));
             return;
         }
+//        if (!TogetherManager.currentLobby.isOwner()) {
+//            DevConsole.log(getText().get("sfrun only host"));
+//            return;
+//        }
+
         String player = tokens[1];
         String command = String.join(" ", Arrays.copyOfRange(tokens, 2, tokens.length));
         CoopCommandHandler.proposeNewCommand(player, command);
@@ -35,8 +41,8 @@ public class SfRun extends ConsoleCommand {
     protected ArrayList<String> extraOptions(String[] tokens, int depth) {
         if (tokens.length < 3) {
             ArrayList<String> opts = new ArrayList<>();
-            opts.add(CoopCommandHandler.TEXT[2]);
-            opts.add(CoopCommandHandler.TEXT[3]);
+            opts.add(getText().get("all"));
+            opts.add(getText().get("me"));
             opts.addAll(TogetherManager.players.stream().map(p -> p.userName).collect(Collectors.toList()));
             return opts;
         } else {
@@ -51,4 +57,6 @@ public class SfRun extends ConsoleCommand {
         DevConsole.couldNotParse();
         DevConsole.log("sfrun [player|all|me] [command...]");
     }
+
+    public static Map<String, String> getText() { return CoopCommandHandler.TEXT; }
 }

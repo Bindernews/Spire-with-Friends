@@ -1,7 +1,7 @@
 package chronoMods.ui.hud;
 
 import chronoMods.TogetherManager;
-import chronoMods.coop.CoopCommandHandler;
+import chronoMods.network.CoopCommandHandler;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.evacipated.cardcrawl.modthespire.lib.SpireInsertPatch;
 import com.evacipated.cardcrawl.modthespire.lib.SpirePatch;
