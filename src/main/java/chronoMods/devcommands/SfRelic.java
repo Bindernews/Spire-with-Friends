@@ -3,11 +3,9 @@ package chronoMods.devcommands;
 import basemod.DevConsole;
 import basemod.devcommands.ConsoleCommand;
 import chronoMods.coop.relics.CoopRelicHelper;
-import com.badlogic.gdx.math.Vector2;
 import com.megacrit.cardcrawl.blights.AbstractBlight;
 import com.megacrit.cardcrawl.core.Settings;
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
-import com.megacrit.cardcrawl.helpers.BlightHelper;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,7 +27,7 @@ public class SfRelic extends ConsoleCommand {
     protected void errorMsg() {
         DevConsole.couldNotParse();
         DevConsole.log(Arrays.asList(
-                "coop-relic:",
+                KEY + ":",
                 "* add [relic_name]"
         ));
     }

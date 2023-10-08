@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.IntMap;
 import com.megacrit.cardcrawl.core.CardCrawlGame;
 import lombok.val;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.BufferUnderflowException;
@@ -14,10 +15,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Map;
 
-import static chronoMods.network.NetworkHelper.service;
-
 public class CoopCommandHandler {
-    private static final Logger log = TogetherManager.logger;
+    private static final Logger log = LogManager.getLogger(CoopCommandHandler.class);
 
     /**
      * Code for command proposal packets.
@@ -66,7 +65,7 @@ public class CoopCommandHandler {
     /**
      * Map of local event IDs to their actual event IDs.
      */
-    private static IntMap<Integer> localToGlobalEventIdMap = new IntMap<>();
+    private static final IntMap<Integer> localToGlobalEventIdMap = new IntMap<>();
 
     /**
      * Outgoing command event, may be {@code null}.
@@ -89,7 +88,7 @@ public class CoopCommandHandler {
                 handleSelectPacket(packet);
                 break;
             default:
-                log.warn("invalid packet kind {}", Integer.toHexString(kind));
+                log.error("invalid packet kind {}", Integer.toHexString(kind));
                 break;
         }
     }
@@ -135,7 +134,7 @@ public class CoopCommandHandler {
             localToGlobalEventIdMap.put(localEid, event.id);
             // Show chat message informing the player of their options
             String chatMsg1 = String.format(TEXT.get("player proposing"), event.proposer.userName, event.getCommand());
-            TogetherManager.chatScreen.addMsg(chatMsg1, Color.BLUE);
+            TogetherManager.chatScreen.addMsg(chatMsg1, Color.WHITE);
 //            String chatMsg2 = String.format(TEXT.get("yes no help"), localEid);
 //            TogetherManager.chatScreen.addMsg(chatMsg2, Color.BLUE);
 
@@ -143,7 +142,7 @@ public class CoopCommandHandler {
             // TODO temporarily we're auto-agreeing
             sendChoiceLocalId(localEid, true);
         } catch (BufferUnderflowException e) {
-            TogetherManager.logger.warn(e);
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -158,11 +157,13 @@ public class CoopCommandHandler {
             return;
         }
 
+        // If we want to run a command for ourselves, then do that
         if (executor.equalsIgnoreCase(TEXT.get("me"))) {
             executor = TogetherManager.getCurrentUser().userName;
         }
         CoopCommandEvent event = new CoopCommandEvent(
                 nextGlobalEventId, executor, command, TogetherManager.getCurrentUser());
+        //
         nextGlobalEventId++;
         // Add to event list, but don't add local event ID since we automatically agree with it
         events.add(event);
@@ -227,7 +228,7 @@ public class CoopCommandHandler {
      */
     public static void startGame() {
         // Get index of player in lobby
-        int playerIndex = TogetherManager.currentLobby.getLobbyMembers().indexOf(TogetherManager.getCurrentUser());
+        int playerIndex = TogetherManager.players.indexOf(TogetherManager.getCurrentUser());
         initialEventId = playerIndex * COMMAND_ID_BLOCK_SIZE;
         nextGlobalEventId = initialEventId;
     }
