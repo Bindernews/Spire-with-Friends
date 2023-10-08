@@ -1,12 +1,11 @@
-package chronoMods.coop;
+package chronoMods.utilities;
 
 import basemod.DevConsole;
 import chronoMods.TogetherManager;
 import chronoMods.network.BBuf;
-import chronoMods.network.CoopCommandHandler;
+import chronoMods.network.DevCommandHandler;
 import chronoMods.network.NetworkHelper;
 import chronoMods.network.RemotePlayer;
-import chronoMods.utilities.VoteTracker;
 import lombok.Getter;
 
 import java.nio.ByteBuffer;
@@ -18,7 +17,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * <br/>
  * The static {@code events} field holds all current active events.
  */
-public class CoopCommandEvent {
+public class DevCommandEvent {
     /** Player who proposed this command */
     public final RemotePlayer proposer;
 
@@ -35,6 +34,12 @@ public class CoopCommandEvent {
     /** The event ID, should be unique for a given run */
     public final int id;
 
+    /**
+     * Local event ID, to make it easier for players to type.
+     * This will be -1 for the player who proposed the event (since they don't generate a local ID).
+     */
+    public int localId = -1;
+
     /** Track if the local player has made a choice, used for UI */
     public boolean hasChosen = false;
 
@@ -43,7 +48,7 @@ public class CoopCommandEvent {
      */
     private final VoteTracker<Boolean> playerChoices = new VoteTracker<>(VoteTracker.VoteMode.CONSENSUS);
 
-    public CoopCommandEvent(int id, String target, String command, RemotePlayer proposer) {
+    public DevCommandEvent(int id, String target, String command, RemotePlayer proposer) {
         this.id = id;
         this.target = target;
         this.command = command;
@@ -55,7 +60,7 @@ public class CoopCommandEvent {
      */
     public ByteBuffer encodeChoicePacket() {
         ByteBuffer data = BBuf.allocate(10 + 1);
-        putHeader(data, CoopCommandHandler.PACKET_SELECT);
+        putHeader(data, DevCommandHandler.PACKET_SELECT);
         data.put((byte)(getCurrentChoice() ? 1:0));
         return BBuf.pos(data, 0);
     }
@@ -67,7 +72,7 @@ public class CoopCommandEvent {
         byte[] targetBytes = target.getBytes(UTF_8);
         byte[] commandBytes = command.getBytes(UTF_8);
         ByteBuffer data = BBuf.allocate(10 + targetBytes.length + 2 + commandBytes.length + 2);
-        putHeader(data, CoopCommandHandler.PACKET_PROPOSE);
+        putHeader(data, DevCommandHandler.PACKET_PROPOSE);
         BBuf.putLenBytes(data, targetBytes);
         BBuf.putLenBytes(data, commandBytes);
         return BBuf.pos(data, 0);
@@ -104,6 +109,8 @@ public class CoopCommandEvent {
                 // Not consensus, don't allow
                 TogetherManager.log("Co-op command was rejected");
             }
+            // Either way, remove from the list of events.
+            DevCommandHandler.getInst().removeEvent(this);
         }
     }
 

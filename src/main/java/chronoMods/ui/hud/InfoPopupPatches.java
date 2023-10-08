@@ -1,7 +1,7 @@
 package chronoMods.ui.hud;
 
 import chronoMods.TogetherManager;
-import chronoMods.network.CoopCommandHandler;
+import chronoMods.network.DevCommandHandler;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.evacipated.cardcrawl.modthespire.lib.SpireInsertPatch;
 import com.evacipated.cardcrawl.modthespire.lib.SpirePatch;
@@ -14,7 +14,7 @@ public class InfoPopupPatches {
         @SpireInsertPatch(rloc=760-733)
         public static void Insert(CardCrawlGame __instance) {
             TogetherManager.infoPopup.update();
-            CoopCommandHandler.update();
+            DevCommandHandler.update();
         }
     }
 
@@ -23,7 +23,7 @@ public class InfoPopupPatches {
         @SpireInsertPatch(rloc=458-408)
         public static void Insert(CardCrawlGame __instance, SpriteBatch ___sb) {
             TogetherManager.infoPopup.render(___sb);
-            CoopCommandHandler.render(___sb);
+            DevCommandHandler.render(___sb);
         }
     }
 }

@@ -1,11 +1,16 @@
 package chronoMods.network;
 
 import chronoMods.TogetherManager;
-import chronoMods.coop.CoopCommandEvent;
+import chronoMods.chat.ChatListener;
+import chronoMods.utilities.DevCommandEvent;
+import chronoMods.ui.hud.InfoPopup;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.IntMap;
+import com.google.gson.Gson;
 import com.megacrit.cardcrawl.core.CardCrawlGame;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.val;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,69 +20,88 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Map;
 
-public class CoopCommandHandler {
-    private static final Logger log = LogManager.getLogger(CoopCommandHandler.class);
+import static chronoMods.TogetherManager.chatScreen;
+
+/**
+ * Handles creating, tracking, choosing, networking, etc. for the {@code sfrun} dev command,
+ * and the ability to run dev console commands during a multi-player run in general.
+ */
+public class DevCommandHandler implements ChatListener {
+    private static final Logger log = LogManager.getLogger(DevCommandHandler.class);
 
     /**
-     * Code for command proposal packets.
+     * ID for command proposal packets.
      */
     public static final short PACKET_PROPOSE = 1;
 
     /**
-     * Code for command selection (accept/reject) packets.
+     * ID for command selection (accept/reject) packets.
      */
     public static final short PACKET_SELECT = 2;
 
 
     /**
      * Maximum number of commands a player may send before nextEventId will loop back to initialEventId.
+     * This allows for up to 32 players to each have a unique global event ID block.
      */
     private static final int COMMAND_ID_BLOCK_SIZE = 1 << 26;
 
     /**
      * Localized text strings used by co-op commands
      */
-    public static final Map<String, String> TEXT =
-            CardCrawlGame.languagePack.getUIString("CoopCommand").TEXT_DICT;
+    public static final Strings TEXT = Strings.fromMap(
+            CardCrawlGame.languagePack.getUIString("CoopCommand").TEXT_DICT);
+
+    private static final InfoPopup errorPopup = new InfoPopup();
+
+    @Getter
+    private static final DevCommandHandler inst = new DevCommandHandler();
 
     /**
      * Initial event ID. Assigned based on the player index in the lobby,
      * this gives each player a section of 2^26 command IDs before looping back to the beginning of their ID block.
      */
-    private static int initialEventId = -1;
+    private int initialEventId = -1;
 
     /**
      * The next event ID.
      */
-    private static int nextGlobalEventId = 1;
+    private int nextGlobalEventId = 1;
 
     /**
      * List of currently active commands events.
      */
-    public static ArrayList<CoopCommandEvent> events = new ArrayList<>();
+    public ArrayList<DevCommandEvent> events = new ArrayList<>();
 
     /**
      * When displaying the events in chat, we assign local numbers for players to use when
      * sending accept/reject messages.
      */
-    private static int nextLocalEventId = 1;
+    private int nextLocalEventId = 1;
 
     /**
      * Map of local event IDs to their actual event IDs.
      */
-    private static final IntMap<Integer> localToGlobalEventIdMap = new IntMap<>();
+    private final IntMap<Integer> localToGlobalEventIdMap = new IntMap<>();
 
     /**
      * Outgoing command event, may be {@code null}.
      */
-    private static CoopCommandEvent outgoingEvent = null;
+    private DevCommandEvent outgoingEvent = null;
 
     /**
      * Outgoing packet mode. Same as the PACKET_* constants, or -1 for invalid value.
      */
-    private static short outgoingMode = -1;
+    private short outgoingMode = -1;
 
-    public static void handlePacket(Packet packet) {
+    /**
+     * If true, proposed commands will automatically be accepted.
+     */
+    @Getter @Setter
+    private boolean autoAccept = true;
+
+
+    public void handlePacket(Packet packet) {
         short kind = packet.data().getShort(4);
         BBuf.pos(packet.data(), 6);
         switch (kind) {
@@ -96,9 +120,9 @@ public class CoopCommandHandler {
     /**
      * Decode the packet with the given choice data and update the appropriate event
      */
-    private static void handleSelectPacket(Packet packet) {
+    private void handleSelectPacket(Packet packet) {
         val data = packet.data();
-        CoopCommandEvent event = getEventWithId(data.getInt());
+        DevCommandEvent event = getEventWithId(data.getInt());
         if (event == null) {
             return;
         }
@@ -107,17 +131,17 @@ public class CoopCommandHandler {
     }
 
     /**
-     * Handle a "propose" packet, as created with {@link CoopCommandEvent#encodeProposePacket}.
+     * Handle a "propose" packet, as created with {@link DevCommandEvent#encodeProposePacket}.
      * This method has lots of side effects, be careful.
      */
-    private static void handleProposePacket(Packet packet) {
+    private void handleProposePacket(Packet packet) {
         try {
             val data = packet.data();
             int eventId = data.getInt();
             String target = BBuf.getLenString(data);
             String command = BBuf.getLenString(data);
             // Create and add event
-            CoopCommandEvent event = new CoopCommandEvent(eventId, target, command, packet.player());
+            DevCommandEvent event = new DevCommandEvent(eventId, target, command, packet.player());
             // Check for duplicates
             if (getEventWithId(eventId) != null) {
                 // TODO add more detailed error message
@@ -132,15 +156,17 @@ public class CoopCommandHandler {
             int localEid = nextLocalEventId;
             nextLocalEventId++;
             localToGlobalEventIdMap.put(localEid, event.id);
+            event.localId = localEid;
             // Show chat message informing the player of their options
-            String chatMsg1 = String.format(TEXT.get("player proposing"), event.proposer.userName, event.getCommand());
-            TogetherManager.chatScreen.addMsg(chatMsg1, Color.WHITE);
-//            String chatMsg2 = String.format(TEXT.get("yes no help"), localEid);
-//            TogetherManager.chatScreen.addMsg(chatMsg2, Color.BLUE);
-
-            // TODO actually handle chat input
-            // TODO temporarily we're auto-agreeing
-            sendChoiceLocalId(localEid, true);
+            String chatMsg1 = String.format(TEXT.player_proposing, event.proposer.userName, event.getCommand());
+            chatScreen.addMsg(chatMsg1, Color.WHITE);
+            // If autoAccept is on, don't bother asking for chat input.
+            if (autoAccept) {
+                sendChoiceLocalId(localEid, true);
+            } else {
+                String chatMsg2 = String.format(TEXT.yes_no_help, localEid);
+                chatScreen.addMsg(chatMsg2, Color.BLUE);
+            }
         } catch (BufferUnderflowException e) {
             log.error(e.getMessage(), e);
         }
@@ -151,21 +177,24 @@ public class CoopCommandHandler {
      * @param executor Who will be running the command
      * @param command command to propose
      */
-    public static void proposeNewCommand(String executor, String command) {
+    public void proposeNewCommand(String executor, String command) {
         // Check that we CAN send commands
         if (nextGlobalEventId == -1) {
             return;
         }
 
         // If we want to run a command for ourselves, then do that
-        if (executor.equalsIgnoreCase(TEXT.get("me"))) {
+        if (executor.equalsIgnoreCase(TEXT.me)) {
             executor = TogetherManager.getCurrentUser().userName;
         }
-        CoopCommandEvent event = new CoopCommandEvent(
+        DevCommandEvent event = new DevCommandEvent(
                 nextGlobalEventId, executor, command, TogetherManager.getCurrentUser());
-        //
+        // Update global event ID
         nextGlobalEventId++;
-        // Add to event list, but don't add local event ID since we automatically agree with it
+        if (nextGlobalEventId >= initialEventId + COMMAND_ID_BLOCK_SIZE) {
+            nextGlobalEventId = initialEventId;
+        }
+        // Add to the event list, but don't add local event ID since we automatically agree with it
         events.add(event);
 
         outgoingEvent = event;
@@ -181,7 +210,7 @@ public class CoopCommandHandler {
      *
      * @return if the choice was sent or not
      */
-    public static boolean sendChoiceLocalId(int localEid, boolean choice) {
+    public boolean sendChoiceLocalId(int localEid, boolean choice) {
         val event = getEventWithId(localToGlobalEventIdMap.get(localEid));
         if (event == null || event.hasChosen) {
             return false;
@@ -200,11 +229,19 @@ public class CoopCommandHandler {
      * Returns the event with the given event ID, or null if not found
      * @param eventId Event ID to search for
      */
-    public static CoopCommandEvent getEventWithId(int eventId) {
+    public DevCommandEvent getEventWithId(int eventId) {
         return events.stream().filter((e) -> e.id == eventId).findFirst().orElse(null);
     }
 
-    public static ByteBuffer encodePacket() {
+    public void removeEvent(DevCommandEvent event) {
+        // Remove from global event list and local->global id map
+        if (event.localId != -1) {
+            localToGlobalEventIdMap.remove(event.localId);
+        }
+        events.remove(event);
+    }
+
+    public ByteBuffer encodePacket() {
         ByteBuffer data;
         switch (outgoingMode) {
             case PACKET_PROPOSE:
@@ -226,7 +263,7 @@ public class CoopCommandHandler {
     /**
      * Called when the players actually START a new run (e.g. DungeonPostInitialize).
      */
-    public static void startGame() {
+    public void startGame() {
         // Get index of player in lobby
         int playerIndex = TogetherManager.players.indexOf(TogetherManager.getCurrentUser());
         initialEventId = playerIndex * COMMAND_ID_BLOCK_SIZE;
@@ -236,10 +273,55 @@ public class CoopCommandHandler {
     /**
      * Reset the list of events, event IDs, etc.
      */
-    public static void reset() {
+    public void reset() {
         events.clear();
         initialEventId = -1;
         nextGlobalEventId = -1;
+    }
+
+    /**
+     * Initialize the {@link DevCommandHandler} static instance.
+     */
+    public void initialize() {
+        chatScreen.listeners.add(this);
+    }
+
+    @Override
+    public String preChatSend(String message) {
+        val prefix = TEXT.yes_no_prefix;
+        if (message.startsWith(prefix)) {
+            // Parse chat string
+            val args = message.split(" ");
+            try {
+                val localEid = Integer.parseInt(args[1]);
+                val choice = parseYesNo(args[2]);
+                if (!sendChoiceLocalId(localEid, choice)) {
+                    errorPopup.show(TEXT.error, TEXT.error_invalid_command_id);
+                }
+            } catch (ArrayIndexOutOfBoundsException|IllegalArgumentException e) {
+                errorPopup.show(TEXT.error, TEXT.error_sfrun_args);
+            }
+            return "";
+        }
+        return message;
+    }
+
+    /**
+     * Leniently parse a string as yes/no, true/false, or other variations.
+     *
+     * @param s Boolean-ish string
+     * @throws IllegalArgumentException if the string doesn't correspond to true or false
+     * @return boolean
+     */
+    public static boolean parseYesNo(String s) {
+        s = s.toLowerCase();
+        if (s.startsWith(TEXT.yes) || s.equals("true")) {
+            return true;
+        }
+        if (s.startsWith(TEXT.no) || s.equals("false")) {
+            return false;
+        }
+        throw new IllegalArgumentException(String.format("string '%s' cannot be coerced to a boolean", s));
     }
 
     // See InfoPopupPatches for where these are called
@@ -247,10 +329,38 @@ public class CoopCommandHandler {
     /**
      * Global UI update function called via patch
      */
-    public static void update() {}
+    public static void update() {
+        errorPopup.update();
+    }
 
     /**
      * Global UI render callback
      */
-    public static void render(SpriteBatch sb) {}
+    public static void render(SpriteBatch sb) {
+        errorPopup.render(sb);
+    }
+
+
+    public static class Strings {
+        public String error;
+        public String yes;
+        public String no;
+        public String all;
+        public String me;
+        public String yes_no_help;
+        public String yes_no_prefix;
+        public String player_command;
+        public String player_proposing;
+        public String sfrun_only_host;
+        public String sfrun_not_in_game;
+        public String error_sfrun_args;
+        public String error_invalid_command_id;
+        public String allow_command;
+
+        public static Strings fromMap(Map<String, String> m) {
+            val gson = new Gson();
+            val data = gson.toJsonTree(m);
+            return gson.fromJson(data, Strings.class);
+        }
+    }
 }

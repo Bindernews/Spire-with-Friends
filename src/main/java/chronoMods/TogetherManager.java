@@ -1,7 +1,6 @@
 package chronoMods;
 
 import basemod.BaseMod;
-import basemod.DevConsole;
 import basemod.ModPanel;
 import basemod.ReflectionHacks;
 import basemod.devcommands.ConsoleCommand;
@@ -332,6 +331,9 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
         BaseMod.addTopPanelItem(bingoQuickReset);
 
         LinkedInfusions.setupInfusions();
+
+        // Setup command handler, must be AFTER chatScreen is initialized
+        DevCommandHandler.getInst().initialize();
     }
 
     public void CreateFallbackFont() {
@@ -474,7 +476,7 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
         NetworkHelper.embarked = true;
 
         if (TogetherManager.gameMode == mode.Coop) {
-            CoopCommandHandler.startGame();
+            DevCommandHandler.getInst().startGame();
         }
 
         if (TogetherManager.gameMode == TogetherManager.mode.Coop && NewMenuButtons.newGameScreen.hardToggle.isTicked()) {
@@ -499,7 +501,7 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
         chatScreen.clear();
         MergeCustom.isActive = false;
         teamBlights.clear();
-        CoopCommandHandler.reset();
+        DevCommandHandler.getInst().reset();
     }
 
     public static int getModHash() {

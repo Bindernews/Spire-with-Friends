@@ -153,13 +153,19 @@
   "CoopCommand": {
     "TEXT_DICT": {
       "allow_command": "Allow Command?",
-      "player proposing": "Player %s wants to run: %s",
-      "yes no help": "Use '/sfrun %d [yes|no]' to accept or reject the command.",
+      "player_proposing": "Player %s wants to run: %s",
+      "yes_no_help": "Use '/sfrun %d [yes|no]' to accept or reject the command.",
+      "yes_no_prefix": "/sfrun ",
       "player_command": "Player %s is running:\n%s",
-      "sfrun only host": "Only the host may use the sfrun command.",
-      "sfrun not in lobby": "You are not in a co-op game!",
+      "sfrun_only_host": "Only the host may use the sfrun command.",
+      "sfrun_not_in_game": "You are not in a co-op game!",
       "all": "all",
-      "me": "me"
+      "me": "me",
+      "error": "Error",
+      "yes": "y",
+      "no": "n",
+      "error_sfrun_args": "/sfrun invalid arguments",
+      "error_invalid_command_id": "invalid command ID"
     }
   },
   "CoopLegend": {
