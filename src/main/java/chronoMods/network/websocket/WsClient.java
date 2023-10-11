@@ -16,22 +16,16 @@ import io.netty.handler.ssl.SslContextBuilder;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.val;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.function.Consumer;
 
 public class WsClient {
-    private static final Logger LOG = LogManager.getLogger(WsClient.class);
-
     @Getter
     private Channel channel;
-    private final Consumer<ByteBuf> onFrame;
+    private final Handler handler;
 
-    public WsClient(Consumer<ByteBuf> onFrame) {
-        this.onFrame = onFrame;
+    public WsClient(Handler handler) {
+        this.handler = handler;
     }
 
     @SneakyThrows
@@ -74,6 +68,7 @@ public class WsClient {
             val channel = b.connect(server.getHost(), server.getPort()).sync().channel();
             handler.handshakeFuture.sync();
             this.channel = channel;
+            channel.closeFuture().addListener(f -> this.handler.onDisconnect());
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -88,12 +83,7 @@ public class WsClient {
     }
 
     public void disconnect() {
-        try {
-            channel.writeAndFlush(new CloseWebSocketFrame());
-            channel.closeFuture().sync();
-        } catch (InterruptedException e) {
-            LOG.error(e.getMessage(), e);
-        }
+        channel.writeAndFlush(new CloseWebSocketFrame());
     }
 
     public boolean isConnected() {
@@ -138,6 +128,7 @@ public class WsClient {
                 try {
                     handshaker.finishHandshake(ch, (FullHttpResponse) msg);
                     handshakeFuture.setSuccess();
+                    handler.onConnect();
                 } catch (WebSocketHandshakeException e) {
                     handshakeFuture.setFailure(e);
                 }
@@ -150,12 +141,19 @@ public class WsClient {
 
             WebSocketFrame frame = (WebSocketFrame) msg;
             if (frame instanceof BinaryWebSocketFrame) {
-                onFrame.accept(frame.content());
+                handler.onFrame(frame.content());
             } else if (frame instanceof TextWebSocketFrame) {
                 throw new IllegalStateException("Unexpected TextWebSocketFrame");
             } else if (frame instanceof CloseWebSocketFrame) {
                 ch.close();
+                handler.onDisconnect();
             }
         }
+    }
+
+    public interface Handler {
+        void onFrame(ByteBuf buf);
+        void onConnect();
+        void onDisconnect();
     }
 }

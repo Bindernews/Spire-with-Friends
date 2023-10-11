@@ -6,6 +6,8 @@ import chronoMods.network.Packet;
 import chronoMods.network.RemotePlayer;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.LongMap;
+import com.megacrit.cardcrawl.core.CardCrawlGame;
+import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
 import io.netty.buffer.ByteBuf;
 import lombok.val;
 import org.apache.logging.log4j.LogManager;
@@ -14,15 +16,11 @@ import org.apache.logging.log4j.Logger;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class WebsocketIntegration implements Integration {
+public class WebsocketIntegration implements Integration, WsClient.Handler {
     private static final Logger LOG = LogManager.getLogger(WebsocketIntegration.class);
-
-    public static final long PKID_SEND = Long.MIN_VALUE;
-    public static final long PKID_CONTROL = PKID_SEND + 1;
 
     private final URI server;
     private final WsClient client;
@@ -33,38 +31,36 @@ public class WebsocketIntegration implements Integration {
         this.server = server;
         this.playerIdMap = new LongMap<>();
         this.packetQueue = new ConcurrentLinkedQueue<>();
-        this.client = new WsClient(this::handleFrame);
+        this.client = new WsClient(this);
     }
 
-    private void handleFrame(ByteBuf buf) {
+    @Override
+    public void onFrame(ByteBuf buf) {
+        // NOTE: Runs in Netty IO thread
         // Read the sender ID
         final long senderId = buf.readLong();
-        // If the message is a control message, process it differently.
-        if (senderId == PKID_CONTROL) {
-            val codeId = buf.readShort();
-            val codeVal = ControlCode.fromOrdinal(codeId);
-            if (codeVal == null) {
-                LOG.error("Invalid control code {}", codeId);
-                client.disconnect();
-                return;
-            }
-            try {
-                buf.markReaderIndex();
-                handleControlFrame(buf, codeVal);
-            } catch (IndexOutOfBoundsException e) {
-                LOG.error("Parsing packet '{}' failed", codeVal.toString());
-                client.disconnect();
-            }
-        } else {
-            WebsocketPlayer player = playerIdMap.get(senderId);
-            if (player == null) {
-                return;
-            }
-            ByteBuffer data = ByteBuffer.allocateDirect(buf.readableBytes());
-            buf.readBytes(data);
-            data.rewind();
-            packetQueue.add(new Packet(player, data));
+        WebsocketPlayer player = playerIdMap.get(senderId);
+        if (player == null) {
+            return;
         }
+        ByteBuffer data = ByteBuffer.allocateDirect(buf.readableBytes());
+        buf.readBytes(data);
+        data.rewind();
+        packetQueue.add(new Packet(player, data));
+    }
+
+    @Override
+    public void onConnect() {
+        val userName = CardCrawlGame.playerName;
+        val buf = client.buffer(10 + 1 + 2 + userName.length());
+        buf.writeLong(PKID_CONTROL_OUT).writeShort(ControlCode.Login.toShort());
+        buf.writeByte(0); // login method 0
+        bufWriteString(buf, CardCrawlGame.playerName);
+    }
+
+    @Override
+    public void onDisconnect() {
+
     }
 
     private void handleControlFrame(ByteBuf buf, ControlCode code) {
@@ -161,7 +157,7 @@ public class WebsocketIntegration implements Integration {
 
     @Override
     public void dispose() {
-
+        client.disconnect();
     }
 
     @Override
@@ -169,24 +165,5 @@ public class WebsocketIntegration implements Integration {
         return null;
     }
 
-    public enum ControlCode {
-        None,
-        AddPlayer,
-        RemovePlayer,
 
-        ;
-
-        /**
-         * Returns the control code with the given ordinal value, or null if out of range.
-         * @param ord ordinal index
-         * @return ControlCode or null
-         */
-        public static ControlCode fromOrdinal(int ord) {
-            if (ord < 0 || ord >= values().length) {
-                return null;
-            } else {
-                return values()[ord];
-            }
-        }
-    }
 }
