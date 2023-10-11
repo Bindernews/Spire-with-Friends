@@ -98,7 +98,7 @@ public class DevCommandHandler implements ChatListener {
      * If true, proposed commands will automatically be accepted.
      */
     @Getter @Setter
-    private boolean autoAccept = true;
+    private boolean autoAccept = false;
 
 
     public void handlePacket(Packet packet) {
@@ -157,15 +157,18 @@ public class DevCommandHandler implements ChatListener {
             nextLocalEventId++;
             localToGlobalEventIdMap.put(localEid, event.id);
             event.localId = localEid;
-            // Show chat message informing the player of their options
-            String chatMsg1 = String.format(TEXT.player_proposing, event.proposer.userName, event.getCommand());
-            chatScreen.addMsg(chatMsg1, Color.WHITE);
-            // If autoAccept is on, don't bother asking for chat input.
+
             if (autoAccept) {
+                // If autoAccept is on, don't bother asking for chat input.
+                String chatMsg1 = String.format(TEXT.player_command, event.proposer.userName, event.getCommand());
+                chatScreen.addMsg(chatMsg1, Color.WHITE);
                 sendChoiceLocalId(localEid, true);
             } else {
+                // Show chat message informing the player of their options
+                String chatMsg1 = String.format(TEXT.player_proposing, event.proposer.userName, event.getCommand());
+                chatScreen.addMsg(chatMsg1, Color.WHITE);
                 String chatMsg2 = String.format(TEXT.yes_no_help, localEid);
-                chatScreen.addMsg(chatMsg2, Color.BLUE);
+                chatScreen.addMsg(chatMsg2, Color.WHITE);
             }
         } catch (BufferUnderflowException e) {
             log.error(e.getMessage(), e);

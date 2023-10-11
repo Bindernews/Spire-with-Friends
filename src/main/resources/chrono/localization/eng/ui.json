@@ -154,9 +154,9 @@
     "TEXT_DICT": {
       "allow_command": "Allow Command?",
       "player_proposing": "Player %s wants to run: %s",
-      "yes_no_help": "Use '/sfrun %d [yes|no]' to accept or reject the command.",
-      "yes_no_prefix": "/sfrun ",
-      "player_command": "Player %s is running:\n%s",
+      "player_command": "Player %s is running: %s",
+      "yes_no_help": "Use '!run %d [yes|no]' to accept or reject the command.",
+      "yes_no_prefix": "!run ",
       "sfrun_only_host": "Only the host may use the sfrun command.",
       "sfrun_not_in_game": "You are not in a co-op game!",
       "all": "all",

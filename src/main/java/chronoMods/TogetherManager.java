@@ -169,7 +169,7 @@ public class TogetherManager implements PostDeathSubscriber, PostInitializeSubsc
     public static BingoQuickReset bingoQuickReset;
 
     // Debug flag
-    public static final boolean debug = false;
+    public static final boolean debug = true;
 
     /**
      * DevConsole is patched to only allow dev commands when everyone agrees. This controls if dev commands are
