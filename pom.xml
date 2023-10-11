@@ -16,7 +16,46 @@
         <downfall.version>3.1.11</downfall.version>
         <ascension-plus.version>1.2</ascension-plus.version>
         <discord-game-sdk4j.version>v0.5.5</discord-game-sdk4j.version>
+        <netty.version>4.1.99.Final</netty.version>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>websocket</id>
+            <activation>
+                <property>
+                    <name>websocket</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-codec</artifactId>
+                    <version>${netty.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-codec-http</artifactId>
+                    <version>${netty.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-common</artifactId>
+                    <version>${netty.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-handler</artifactId>
+                    <version>${netty.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-transport</artifactId>
+                    <version>${netty.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 
     <repositories>
         <repository>
@@ -64,6 +103,12 @@
             <groupId>com.github.JnCrMx</groupId>
             <artifactId>discord-game-sdk4j</artifactId>
             <version>${discord-game-sdk4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
