@@ -20,6 +20,7 @@ import com.megacrit.cardcrawl.helpers.input.InputHelper;
 import com.megacrit.cardcrawl.screens.mainMenu.*;
 import com.megacrit.cardcrawl.ui.buttons.GridSelectConfirmButton;
 
+import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MainLobbyScreen implements ScrollBarListener
@@ -105,12 +106,13 @@ public class MainLobbyScreen implements ScrollBarListener
     }
 
     public void createFreshGameList() {
-        gameList.clear();
-
+        // Each update to gameList causes a copy, so it's better to add all values at once.
+        ArrayList<MainLobbyInfo> newList = new ArrayList<>();
         for (Lobby l : NetworkHelper.lobbies) {
-            gameList.add(new MainLobbyInfo(l));
+            newList.add(new MainLobbyInfo(l));
         }
-
+        gameList.clear();
+        gameList.addAll(newList);
         calculateScrollBounds();
     }
 
