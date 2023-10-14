@@ -1,4 +1,4 @@
-package chronoMods.network.websocket;
+package chronoMods.sfw.websocket.common;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -123,14 +123,6 @@ public enum ControlCode implements MyCodecs.WsPacket {
     public static class ListLobbiesResData {
         public long[] lobbyIds;
         public long[] ownerIds;
-
-        public ArrayList<WebsocketLobby> createLobbies(WebsocketIntegration service) {
-            val out = new ArrayList<WebsocketLobby>();
-            for (int i = 0; i < lobbyIds.length; i++) {
-                out.add(new WebsocketLobby(service, lobbyIds[i], ownerIds[i]));
-            }
-            return out;
-        }
     }
 
     @Data @AllArgsConstructor

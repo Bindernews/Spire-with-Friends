@@ -5,7 +5,6 @@ import chronoMods.network.Integration;
 import chronoMods.network.NetworkHelper;
 import chronoMods.network.Packet;
 import chronoMods.network.RemotePlayer;
-import chronoMods.ui.lobby.MainLobbyScreen;
 import chronoMods.ui.mainMenu.NewMenuButtons;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.LongMap;
@@ -29,15 +28,21 @@ import org.apache.logging.log4j.Logger;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 public class WebsocketIntegration implements Integration {
     public static final Logger LOG = LogManager.getLogger(WebsocketIntegration.class);
 
     private final URI server;
-    private final LongMap<WebsocketPlayer> playerIdMap;
+    @Getter
+    private final LongMap<WebsocketPlayer> playerIdMap = new LongMap<>();
+    private final LongMap<WebsocketLobby> lobbyIdMap = new LongMap<>();
     private final Queue<Packet> packetQueue = new ConcurrentLinkedQueue<>();
     private final ReentrantLock lobbiesLock = new ReentrantLock();
 
@@ -46,13 +51,12 @@ public class WebsocketIntegration implements Integration {
 
     public WebsocketIntegration(URI server) {
         this.server = server;
-        this.playerIdMap = new LongMap<>();
     }
 
     protected void onConnect() {
         val userName = CardCrawlGame.playerName;
         val packet = new ControlPacket(
-                ControlCode.Login,
+                ControlCode.LoginReq,
                 new ControlCode.LoginData("unauthenticated", userName));
         channel.writeAndFlush(packet);
     }
@@ -80,8 +84,22 @@ public class WebsocketIntegration implements Integration {
                 val data = pkt.<ControlCode.RemovePlayerData>getData();
                 playerIdMap.remove(data.playerId);
             } break;
+            case CreateLobby: {
+                val data = pkt.<ControlCode.CreateLobbyData>getData();
+                val lobby = new WebsocketLobby(this, data.getLobbyId(), data.getOwnerId());
+                lobby.setMaxPlayers(data.getMaxPlayers());
+                lobbyIdMap.put(lobby.getLobbyId(), lobby);
+            } break;
+            case DeleteLobby: {
+                val data = pkt.<ControlCode.CreateLobbyData>getData();
+                val lobby = lobbyIdMap.get(data.getLobbyId());
+                lobbyIdMap.remove(data.getLobbyId());
+                if (TogetherManager.currentLobby == lobby) {
+                    setCurrentLobby(null);
+                }
+            } break;
             case ListLobbiesReq:
-                // TODO report protocol error, client should not receive this
+                throwBadClientPacket(ControlCode.ListLobbiesReq);
                 break;
             case ListLobbiesRes: {
                 val data = pkt.<ControlCode.ListLobbiesResData>getData();
@@ -95,10 +113,35 @@ public class WebsocketIntegration implements Integration {
                 }
                 NewMenuButtons.lobbyScreen.createFreshGameList();
             } break;
-            case Login:
-                // TODO report protocol error
+            case JoinLobby: {
+                // Handle incoming lobby join information
+                val data = pkt.<ControlCode.JoinLobbyData>getData();
+                val lobby = checkedGetLobby(data.getLobbyId());
+                // If current player ID is part of the lobby data, we have been joined into this lobby
+                if (data.hasId(TogetherManager.currentUser.getAccountID())) {
+                    setCurrentLobby(lobby);
+                }
+                // Regardless, update the lobby with list of player IDs
+                lobby.addPlayers(data.getPlayerIds());
+            } break;
+            case LeaveLobby: {
+                val data = pkt.<ControlCode.JoinLobbyData>getData();
+                val lobby = checkedGetLobby(data.getLobbyId());
+                // If we are in the leave lobby list AND currently in the lobby, then leave
+                if (data.hasId(TogetherManager.currentUser.getAccountID()) && TogetherManager.currentLobby == lobby) {
+                    setCurrentLobby(null);
+                }
+                // Regardless, update the lobby
+                lobby.removePlayers(data.getPlayerIds());
+            } break;
+            case LoginReq:
+                throwBadClientPacket(ControlCode.LoginReq);
                 break;
         }
+    }
+
+    private void throwBadClientPacket(ControlCode code) {
+        throw new SwfProtocolException(String.format("client received non-client code '%s'", code.name()));
     }
 
     @Override
@@ -126,12 +169,15 @@ public class WebsocketIntegration implements Integration {
     public void createLobby(TogetherManager.mode gameMode) {
         val maxPlayers = maxPlayerForGameMode(gameMode);
         write(new ControlPacket(ControlCode.CreateLobby,
-                new ControlCode.CreateLobbyData(maxPlayers, gameMode.name())));
+                new ControlCode.CreateLobbyData(0, 0, maxPlayers, gameMode.name())));
     }
 
     @Override
     public void setLobbyPrivate(boolean priv) {
-
+        val lobby = (WebsocketLobby) TogetherManager.currentLobby;
+        if (lobby != null) {
+            lobby.setPrivate(priv);
+        }
     }
 
     @Override
@@ -181,6 +227,33 @@ public class WebsocketIntegration implements Integration {
      */
     public void write(Object message) {
         channel.writeAndFlush(message);
+    }
+
+    /**
+     * Returns a list of players with the given IDs. Any player not found will
+     * not be returned, but it will not be an error.
+     * @param playerIds List of player IDs to search for
+     */
+    public List<WebsocketPlayer> getPlayersById(long[] playerIds) {
+        return Arrays.stream(playerIds)
+                .mapToObj(playerIdMap::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private WebsocketLobby checkedGetLobby(long lobbyId) {
+        val lobby = lobbyIdMap.get(lobbyId);
+        if (lobby == null) {
+            throw new SwfProtocolException(String.format("unknown lobby ID x%x", lobbyId));
+        }
+        return lobby;
+    }
+
+    private void setCurrentLobby(WebsocketLobby lobby) {
+        if (TogetherManager.currentLobby != lobby) {
+            TogetherManager.currentLobby = lobby;
+            // TODO there's probably other stuff I have to do to change lobby
+        }
     }
 
     @SneakyThrows

@@ -3,14 +3,20 @@ package chronoMods.network.websocket;
 import chronoMods.TogetherManager;
 import chronoMods.network.Lobby;
 import chronoMods.network.RemotePlayer;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.val;
 
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class WebsocketLobby extends Lobby {
 
+    @Getter
     private final long lobbyId;
     private long ownerId;
+    @Setter
+    private int maxPlayers;
 
     public WebsocketLobby(WebsocketIntegration service, long lobbyId, long ownerId) {
         super(service);
@@ -36,22 +42,27 @@ public class WebsocketLobby extends Lobby {
 
     @Override
     public void newOwner() {
-
+        // TODO
     }
 
     @Override
     public int getMemberCount() {
-        return 0;
+        return players.size();
     }
 
     @Override
     public CopyOnWriteArrayList<RemotePlayer> getLobbyMembers() {
-        return null;
+        return players;
     }
 
     @Override
     public String getMemberNameList() {
-        return null;
+        val sb = new StringBuilder();
+        for (RemotePlayer p : players) {
+            sb.append("\t");
+            sb.append(p.userName);
+        }
+        return sb.substring(1);
     }
 
     @Override
@@ -78,22 +89,51 @@ public class WebsocketLobby extends Lobby {
 
     @Override
     public void join() {
-        wsService().write(new ControlPacket(ControlCode.JoinLobby, new ControlCode.JoinLobbyData(lobbyId)));
+        val playerId = new long[]{ TogetherManager.currentUser.getAccountID() };
+        wsService().write(new ControlPacket(ControlCode.JoinLobby,
+                new ControlCode.JoinLobbyData(lobbyId, playerId)));
     }
 
     @Override
     public int getCapacity() {
-        return WebsocketIntegration.maxPlayerForGameMode(TogetherManager.gameMode);
+        return maxPlayers;
     }
 
     @Override
     public String getMetadata(String key) {
+        // TODO
         return null;
     }
 
     @Override
     public void setMetadata(Map<String, String> pairs) {
+        // TODO
+    }
 
+    /**
+     * Add players with the given IDs to this lobby.
+     */
+    protected void addPlayers(long[] playerIds) {
+        val toAdd = wsService().getPlayersById(playerIds);
+        val playerSet = new HashSet<>(players);
+        // Remove duplicates
+        toAdd.forEach(playerSet::remove);
+        playerSet.addAll(toAdd);
+        // Update players
+        players.clear();
+        players.addAll(playerSet);
+    }
+
+    /**
+     * Remove players with the given IDs from this lobby.
+     */
+    protected void removePlayers(long[] playerIds) {
+        val toRemove = wsService().getPlayersById(playerIds);
+        val playerSet = new HashSet<>(players);
+        toRemove.forEach(playerSet::remove);
+        // Update players
+        players.clear();
+        players.addAll(playerSet);
     }
 
     /**
