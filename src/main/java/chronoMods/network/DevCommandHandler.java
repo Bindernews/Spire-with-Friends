@@ -54,6 +54,7 @@ public class DevCommandHandler implements ChatListener {
 
     private static final InfoPopup errorPopup = new InfoPopup();
 
+    /** Singleton instance. */
     @Getter
     private static final DevCommandHandler inst = new DevCommandHandler();
 
@@ -122,7 +123,7 @@ public class DevCommandHandler implements ChatListener {
      */
     private void handleSelectPacket(Packet packet) {
         val data = packet.data();
-        DevCommandEvent event = getEventWithId(data.getInt());
+        val event = getEventWithId(data.getInt());
         if (event == null) {
             return;
         }
@@ -141,7 +142,7 @@ public class DevCommandHandler implements ChatListener {
             String target = BBuf.getLenString(data);
             String command = BBuf.getLenString(data);
             // Create and add event
-            DevCommandEvent event = new DevCommandEvent(eventId, target, command, packet.player());
+            val event = new DevCommandEvent(eventId, target, command, packet.player());
             // Check for duplicates
             if (getEventWithId(eventId) != null) {
                 // TODO add more detailed error message
@@ -190,7 +191,7 @@ public class DevCommandHandler implements ChatListener {
         if (executor.equalsIgnoreCase(TEXT.me)) {
             executor = TogetherManager.getCurrentUser().userName;
         }
-        DevCommandEvent event = new DevCommandEvent(
+        val event = new DevCommandEvent(
                 nextGlobalEventId, executor, command, TogetherManager.getCurrentUser());
         // Update global event ID
         nextGlobalEventId++;

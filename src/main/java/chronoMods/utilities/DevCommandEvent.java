@@ -46,7 +46,7 @@ public class DevCommandEvent {
     /**
      * Track the choices of each player.
      */
-    private final VoteTracker<Boolean> playerChoices = new VoteTracker<>(VoteTracker.VoteMode.CONSENSUS);
+    private final VoteTracker playerChoices = new VoteTracker(VoteTracker.VoteMode.CONSENSUS);
 
     public DevCommandEvent(int id, String target, String command, RemotePlayer proposer) {
         this.id = id;
@@ -96,22 +96,26 @@ public class DevCommandEvent {
         if (playerInfo.isUser(TogetherManager.currentUser)) {
             hasChosen = true;
         }
-
+        // Check for a final decision
         if (playerChoices.check(TogetherManager.players.size())) {
-            if (playerChoices.getChoice()) {
-                // Everyone agrees!
-                TogetherManager.log("Co-op command was accepted");
-                // Only run the command if we are the intended target, or if everyone should run it
-                if (target.equals("all") || target.equals(TogetherManager.currentUser.userName)) {
-                    runCommand();
-                }
-            } else {
-                // Not consensus, don't allow
-                TogetherManager.log("Co-op command was rejected");
-            }
-            // Either way, remove from the list of events.
-            DevCommandHandler.getInst().removeEvent(this);
+            handleChoice(playerChoices.getChoice() == 1);
         }
+    }
+
+    private void handleChoice(boolean choice) {
+        if (choice) {
+            // Everyone agrees!
+            TogetherManager.log("Co-op command was accepted");
+            // Only run the command if we are the intended target, or if everyone should run it
+            if (target.equals("all") || target.equals(TogetherManager.currentUser.userName)) {
+                runCommand();
+            }
+        } else {
+            // Not consensus, don't allow
+            TogetherManager.log("Co-op command was rejected");
+        }
+        // Either way, remove from the list of events.
+        DevCommandHandler.getInst().removeEvent(this);
     }
 
     private void runCommand() {
@@ -137,7 +141,7 @@ public class DevCommandEvent {
      * @return the current player's choice, or false if they haven't chosen yet
      */
     public boolean getCurrentChoice() {
-        return playerChoices.get(TogetherManager.currentUser, false);
+        return playerChoices.get(TogetherManager.currentUser, 0) == 1;
     }
 
 }
